@@ -1,30 +1,28 @@
 {
-  "_from": "@jridgewell/gen-mapping@^0.3.12",
-  "_id": "@jridgewell/gen-mapping@0.3.13",
+  "_from": "@jridgewell/remapping@^2.3.5",
+  "_id": "@jridgewell/remapping@2.3.5",
   "_inBundle": false,
-  "_integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
-  "_location": "/@jridgewell/gen-mapping",
+  "_integrity": "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ==",
+  "_location": "/@jridgewell/remapping",
   "_phantomChildren": {},
   "_requested": {
     "type": "range",
     "registry": true,
-    "raw": "@jridgewell/gen-mapping@^0.3.12",
-    "name": "@jridgewell/gen-mapping",
-    "escapedName": "@jridgewell%2fgen-mapping",
+    "raw": "@jridgewell/remapping@^2.3.5",
+    "name": "@jridgewell/remapping",
+    "escapedName": "@jridgewell%2fremapping",
     "scope": "@jridgewell",
-    "rawSpec": "^0.3.12",
+    "rawSpec": "^2.3.5",
     "saveSpec": null,
-    "fetchSpec": "^0.3.12"
+    "fetchSpec": "^2.3.5"
   },
   "_requiredBy": [
-    "/@babel/generator",
-    "/@jridgewell/remapping",
-    "/sucrase"
+    "/@babel/core"
   ],
-  "_resolved": "https://registry.npmjs.org/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz",
-  "_shasum": "6342a19f44347518c93e43b1ac69deb3c4656a1f",
-  "_spec": "@jridgewell/gen-mapping@^0.3.12",
-  "_where": "C:\\Users\\25135\\Desktop\\乡叙心域\\node_modules\\@babel\\generator",
+  "_resolved": "https://registry.npmjs.org/@jridgewell/remapping/-/remapping-2.3.5.tgz",
+  "_shasum": "375c476d1972947851ba1e15ae8f123047445aa1",
+  "_spec": "@jridgewell/remapping@^2.3.5",
+  "_where": "C:\\Users\\25135\\Desktop\\乡叙心域\\node_modules\\@babel\\core",
   "author": {
     "name": "Justin Ridgewell",
     "email": "justin@ridgewell.name"
@@ -34,24 +32,27 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "@jridgewell/sourcemap-codec": "^1.5.0",
+    "@jridgewell/gen-mapping": "^0.3.5",
     "@jridgewell/trace-mapping": "^0.3.24"
   },
   "deprecated": false,
-  "description": "Generate source maps",
+  "description": "Remap sequential sourcemaps through transformations to point at the original source code",
+  "devDependencies": {
+    "source-map": "0.6.1"
+  },
   "exports": {
     ".": [
       {
         "import": {
-          "types": "./types/gen-mapping.d.mts",
-          "default": "./dist/gen-mapping.mjs"
+          "types": "./types/remapping.d.mts",
+          "default": "./dist/remapping.mjs"
         },
         "default": {
-          "types": "./types/gen-mapping.d.cts",
-          "default": "./dist/gen-mapping.umd.js"
+          "types": "./types/remapping.d.cts",
+          "default": "./dist/remapping.umd.js"
         }
       },
-      "./dist/gen-mapping.umd.js"
+      "./dist/remapping.umd.js"
     ],
     "./package.json": "./package.json"
   },
@@ -60,26 +61,27 @@
     "src",
     "types"
   ],
-  "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping",
+  "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/remapping",
   "keywords": [
     "source",
-    "map"
+    "map",
+    "remap"
   ],
   "license": "MIT",
-  "main": "dist/gen-mapping.umd.js",
-  "module": "dist/gen-mapping.mjs",
-  "name": "@jridgewell/gen-mapping",
+  "main": "dist/remapping.umd.js",
+  "module": "dist/remapping.mjs",
+  "name": "@jridgewell/remapping",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jridgewell/sourcemaps.git",
-    "directory": "packages/gen-mapping"
+    "directory": "packages/remapping"
   },
   "scripts": {
     "benchmark": "run-s build:code benchmark:*",
     "benchmark:install": "cd benchmark && npm install",
     "benchmark:only": "node --expose-gc benchmark/index.js",
     "build": "run-s -n build:code build:types",
-    "build:code": "node ../../esbuild.mjs gen-mapping.ts",
+    "build:code": "node ../../esbuild.mjs remapping.ts",
     "build:types": "run-s build:types:force build:types:emit build:types:mts",
     "build:types:emit": "tsc --project tsconfig.build.json",
     "build:types:force": "rimraf tsconfig.build.tsbuildinfo",
@@ -96,6 +98,6 @@
     "test:only": "mocha",
     "test:types": "eslint '{src,test}/**/*.ts'"
   },
-  "types": "types/gen-mapping.d.cts",
-  "version": "0.3.13"
+  "types": "types/remapping.d.cts",
+  "version": "2.3.5"
 }

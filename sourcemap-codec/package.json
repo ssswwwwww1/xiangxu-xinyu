@@ -1,30 +1,29 @@
 {
-  "_from": "@jridgewell/gen-mapping@^0.3.12",
-  "_id": "@jridgewell/gen-mapping@0.3.13",
+  "_from": "@jridgewell/sourcemap-codec@^1.5.0",
+  "_id": "@jridgewell/sourcemap-codec@1.5.5",
   "_inBundle": false,
-  "_integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
-  "_location": "/@jridgewell/gen-mapping",
+  "_integrity": "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==",
+  "_location": "/@jridgewell/sourcemap-codec",
   "_phantomChildren": {},
   "_requested": {
     "type": "range",
     "registry": true,
-    "raw": "@jridgewell/gen-mapping@^0.3.12",
-    "name": "@jridgewell/gen-mapping",
-    "escapedName": "@jridgewell%2fgen-mapping",
+    "raw": "@jridgewell/sourcemap-codec@^1.5.0",
+    "name": "@jridgewell/sourcemap-codec",
+    "escapedName": "@jridgewell%2fsourcemap-codec",
     "scope": "@jridgewell",
-    "rawSpec": "^0.3.12",
+    "rawSpec": "^1.5.0",
     "saveSpec": null,
-    "fetchSpec": "^0.3.12"
+    "fetchSpec": "^1.5.0"
   },
   "_requiredBy": [
-    "/@babel/generator",
-    "/@jridgewell/remapping",
-    "/sucrase"
+    "/@jridgewell/gen-mapping",
+    "/@jridgewell/trace-mapping"
   ],
-  "_resolved": "https://registry.npmjs.org/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz",
-  "_shasum": "6342a19f44347518c93e43b1ac69deb3c4656a1f",
-  "_spec": "@jridgewell/gen-mapping@^0.3.12",
-  "_where": "C:\\Users\\25135\\Desktop\\乡叙心域\\node_modules\\@babel\\generator",
+  "_resolved": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz",
+  "_shasum": "6912b00d2c631c0d15ce1a7ab57cd657f2a8f8ba",
+  "_spec": "@jridgewell/sourcemap-codec@^1.5.0",
+  "_where": "C:\\Users\\25135\\Desktop\\乡叙心域\\node_modules\\@jridgewell\\gen-mapping",
   "author": {
     "name": "Justin Ridgewell",
     "email": "justin@ridgewell.name"
@@ -33,25 +32,21 @@
     "url": "https://github.com/jridgewell/sourcemaps/issues"
   },
   "bundleDependencies": false,
-  "dependencies": {
-    "@jridgewell/sourcemap-codec": "^1.5.0",
-    "@jridgewell/trace-mapping": "^0.3.24"
-  },
   "deprecated": false,
-  "description": "Generate source maps",
+  "description": "Encode/decode sourcemap mappings",
   "exports": {
     ".": [
       {
         "import": {
-          "types": "./types/gen-mapping.d.mts",
-          "default": "./dist/gen-mapping.mjs"
+          "types": "./types/sourcemap-codec.d.mts",
+          "default": "./dist/sourcemap-codec.mjs"
         },
         "default": {
-          "types": "./types/gen-mapping.d.cts",
-          "default": "./dist/gen-mapping.umd.js"
+          "types": "./types/sourcemap-codec.d.cts",
+          "default": "./dist/sourcemap-codec.umd.js"
         }
       },
-      "./dist/gen-mapping.umd.js"
+      "./dist/sourcemap-codec.umd.js"
     ],
     "./package.json": "./package.json"
   },
@@ -60,26 +55,26 @@
     "src",
     "types"
   ],
-  "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping",
+  "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec",
   "keywords": [
-    "source",
-    "map"
+    "sourcemap",
+    "vlq"
   ],
   "license": "MIT",
-  "main": "dist/gen-mapping.umd.js",
-  "module": "dist/gen-mapping.mjs",
-  "name": "@jridgewell/gen-mapping",
+  "main": "dist/sourcemap-codec.umd.js",
+  "module": "dist/sourcemap-codec.mjs",
+  "name": "@jridgewell/sourcemap-codec",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jridgewell/sourcemaps.git",
-    "directory": "packages/gen-mapping"
+    "directory": "packages/sourcemap-codec"
   },
   "scripts": {
     "benchmark": "run-s build:code benchmark:*",
     "benchmark:install": "cd benchmark && npm install",
     "benchmark:only": "node --expose-gc benchmark/index.js",
     "build": "run-s -n build:code build:types",
-    "build:code": "node ../../esbuild.mjs gen-mapping.ts",
+    "build:code": "node ../../esbuild.mjs sourcemap-codec.ts",
     "build:types": "run-s build:types:force build:types:emit build:types:mts",
     "build:types:emit": "tsc --project tsconfig.build.json",
     "build:types:force": "rimraf tsconfig.build.tsbuildinfo",
@@ -96,6 +91,6 @@
     "test:only": "mocha",
     "test:types": "eslint '{src,test}/**/*.ts'"
   },
-  "types": "types/gen-mapping.d.cts",
-  "version": "0.3.13"
+  "types": "types/sourcemap-codec.d.cts",
+  "version": "1.5.5"
 }

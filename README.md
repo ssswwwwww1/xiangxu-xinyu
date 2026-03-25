@@ -1,196 +1,227 @@
-# 乡叙心域 - AI 乡村疗愈平台
+# @jridgewell/gen-mapping
 
-> 从"观光"到"疗愈"的智慧桥梁
+> Generate source maps
 
-## 项目简介
+`gen-mapping` allows you to generate a source map during transpilation or minification.
+With a source map, you're able to trace the original location in the source file, either in Chrome's
+DevTools or using a library like [`@jridgewell/trace-mapping`][trace-mapping].
 
-乡叙心域是一个创新的 AI 驱动乡村疗愈平台，通过 AI 技术弥合传统村落的文化资源与都市人群心理需求之间的鸿沟，让沉默的文化"开口说话"，治愈现代人的"心病"。
+You may already be familiar with the [`source-map`][source-map] package's `SourceMapGenerator`. This
+provides the same `addMapping` and `setSourceContent` API.
 
-## 核心功能
+## Installation
 
-### 🎯 AI 四大核心引擎
-
-1. **AI 辅助智能叙事生成引擎**
-   - 基于用户实时位置、情绪状态、兴趣关键词、时空场景等多维数据
-   - 动态生成个性化的叙事路线和开场引导
-   - 从"千人一面"到"千人千叙"
-
-2. **AI 情感计算与分析引擎**
-   - 通过 NLP 技术实时分析用户情感倾向
-   - 识别情绪变化，为个性化推荐提供数据基础
-   - 从"单向讲解"到"双向共鸣"
-
-3. **AI 生成式内容引擎**
-   - 整合用户碎片化记录（照片、语音、文字）
-   - 自动生成具有文学美感的"心路影像诗"
-   - 从"一次消费"到"情感资产"
-
-4. **AI 驱动的情感化数字人**
-   - 为每个村落定制数字人向导
-   - 情感化表达训练，语音语调自适应调整
-   - 从"工具助手"到"疗愈陪伴"
-
-## 技术栈
-
-### 前端
-- **框架**: React 18 + TypeScript
-- **构建工具**: Vite 5
-- **样式**: TailwindCSS 3
-- **动画**: Framer Motion 10
-- **路由**: React Router 6
-- **图标**: Lucide React
-
-### 后端
-- **运行时**: Node.js
-- **框架**: Express
-- **数据库**: SQLite (可选)
-- **API**: RESTful
-
-## 快速开始
-
-### 安装依赖
-
-```bash
-npm install
+```sh
+npm install @jridgewell/gen-mapping
 ```
 
-### 开发模式
+## Usage
 
-启动前端开发服务器：
+```typescript
+import { GenMapping, addMapping, setSourceContent, toEncodedMap, toDecodedMap } from '@jridgewell/gen-mapping';
 
-```bash
-npm run dev
+const map = new GenMapping({
+  file: 'output.js',
+  sourceRoot: 'https://example.com/',
+});
+
+setSourceContent(map, 'input.js', `function foo() {}`);
+
+addMapping(map, {
+  // Lines start at line 1, columns at column 0.
+  generated: { line: 1, column: 0 },
+  source: 'input.js',
+  original: { line: 1, column: 0 },
+});
+
+addMapping(map, {
+  generated: { line: 1, column: 9 },
+  source: 'input.js',
+  original: { line: 1, column: 9 },
+  name: 'foo',
+});
+
+assert.deepEqual(toDecodedMap(map), {
+  version: 3,
+  file: 'output.js',
+  names: ['foo'],
+  sourceRoot: 'https://example.com/',
+  sources: ['input.js'],
+  sourcesContent: ['function foo() {}'],
+  mappings: [
+    [ [0, 0, 0, 0], [9, 0, 0, 9, 0] ]
+  ],
+});
+
+assert.deepEqual(toEncodedMap(map), {
+  version: 3,
+  file: 'output.js',
+  names: ['foo'],
+  sourceRoot: 'https://example.com/',
+  sources: ['input.js'],
+  sourcesContent: ['function foo() {}'],
+  mappings: 'AAAA,SAASA',
+});
 ```
 
-启动后端 API 服务器（新终端）：
+### Smaller Sourcemaps
 
-```bash
-npm run server
+Not everything needs to be added to a sourcemap, and needless markings can cause signficantly
+larger file sizes. `gen-mapping` exposes `maybeAddSegment`/`maybeAddMapping` APIs that will
+intelligently determine if this marking adds useful information. If not, the marking will be
+skipped.
+
+```typescript
+import { maybeAddMapping } from '@jridgewell/gen-mapping';
+
+const map = new GenMapping();
+
+// Adding a sourceless marking at the beginning of a line isn't useful.
+maybeAddMapping(map, {
+  generated: { line: 1, column: 0 },
+});
+
+// Adding a new source marking is useful.
+maybeAddMapping(map, {
+  generated: { line: 1, column: 0 },
+  source: 'input.js',
+  original: { line: 1, column: 0 },
+});
+
+// But adding another marking pointing to the exact same original location isn't, even if the
+// generated column changed.
+maybeAddMapping(map, {
+  generated: { line: 1, column: 9 },
+  source: 'input.js',
+  original: { line: 1, column: 0 },
+});
+
+assert.deepEqual(toEncodedMap(map), {
+  version: 3,
+  names: [],
+  sources: ['input.js'],
+  sourcesContent: [null],
+  mappings: 'AAAA',
+});
 ```
 
-### 生产构建
-
-```bash
-npm run build
-npm run preview
-```
-
-## 项目结构
+## Benchmarks
 
 ```
-乡叙心域/
-├── src/                      # 前端源代码
-│   ├── pages/               # 页面组件
-│   │   ├── HomePage.tsx     # 首页
-│   │   ├── AssessmentPage.tsx  # 情感测评
-│   │   ├── JourneyPage.tsx  # 叙事路线
-│   │   ├── CheckInPage.tsx  # 打卡互动
-│   │   ├── MemoryPage.tsx   # 心灵游记
-│   │   └── DigitalHumanPage.tsx  # 数字人
-│   ├── components/          # 公共组件
-│   ├── App.tsx             # 应用入口
-│   ├── main.tsx            # 入口文件
-│   └── index.css           # 全局样式
-├── server/                  # 后端服务器
-│   └── index.js            # API 服务
-├── package.json            # 项目配置
-├── vite.config.js          # Vite 配置
-├── tailwind.config.js      # Tailwind 配置
-└── tsconfig.json          # TypeScript 配置
+node v18.0.0
+
+amp.js.map
+Memory Usage:
+gen-mapping: addSegment      5852872 bytes
+gen-mapping: addMapping      7716042 bytes
+source-map-js                6143250 bytes
+source-map-0.6.1             6124102 bytes
+source-map-0.8.0             6121173 bytes
+Smallest memory usage is gen-mapping: addSegment
+
+Adding speed:
+gen-mapping:      addSegment x 441 ops/sec ±2.07% (90 runs sampled)
+gen-mapping:      addMapping x 350 ops/sec ±2.40% (86 runs sampled)
+source-map-js:    addMapping x 169 ops/sec ±2.42% (80 runs sampled)
+source-map-0.6.1: addMapping x 167 ops/sec ±2.56% (80 runs sampled)
+source-map-0.8.0: addMapping x 168 ops/sec ±2.52% (80 runs sampled)
+Fastest is gen-mapping:      addSegment
+
+Generate speed:
+gen-mapping:      decoded output x 150,824,370 ops/sec ±0.07% (102 runs sampled)
+gen-mapping:      encoded output x 663 ops/sec ±0.22% (98 runs sampled)
+source-map-js:    encoded output x 197 ops/sec ±0.45% (84 runs sampled)
+source-map-0.6.1: encoded output x 198 ops/sec ±0.33% (85 runs sampled)
+source-map-0.8.0: encoded output x 197 ops/sec ±0.06% (93 runs sampled)
+Fastest is gen-mapping:      decoded output
+
+
+***
+
+
+babel.min.js.map
+Memory Usage:
+gen-mapping: addSegment     37578063 bytes
+gen-mapping: addMapping     37212897 bytes
+source-map-js               47638527 bytes
+source-map-0.6.1            47690503 bytes
+source-map-0.8.0            47470188 bytes
+Smallest memory usage is gen-mapping: addMapping
+
+Adding speed:
+gen-mapping:      addSegment x 31.05 ops/sec ±8.31% (43 runs sampled)
+gen-mapping:      addMapping x 29.83 ops/sec ±7.36% (51 runs sampled)
+source-map-js:    addMapping x 20.73 ops/sec ±6.22% (38 runs sampled)
+source-map-0.6.1: addMapping x 20.03 ops/sec ±10.51% (38 runs sampled)
+source-map-0.8.0: addMapping x 19.30 ops/sec ±8.27% (37 runs sampled)
+Fastest is gen-mapping:      addSegment
+
+Generate speed:
+gen-mapping:      decoded output x 381,379,234 ops/sec ±0.29% (96 runs sampled)
+gen-mapping:      encoded output x 95.15 ops/sec ±2.98% (72 runs sampled)
+source-map-js:    encoded output x 15.20 ops/sec ±7.41% (33 runs sampled)
+source-map-0.6.1: encoded output x 16.36 ops/sec ±10.46% (31 runs sampled)
+source-map-0.8.0: encoded output x 16.06 ops/sec ±6.45% (31 runs sampled)
+Fastest is gen-mapping:      decoded output
+
+
+***
+
+
+preact.js.map
+Memory Usage:
+gen-mapping: addSegment       416247 bytes
+gen-mapping: addMapping       419824 bytes
+source-map-js                1024619 bytes
+source-map-0.6.1             1146004 bytes
+source-map-0.8.0             1113250 bytes
+Smallest memory usage is gen-mapping: addSegment
+
+Adding speed:
+gen-mapping:      addSegment x 13,755 ops/sec ±0.15% (98 runs sampled)
+gen-mapping:      addMapping x 13,013 ops/sec ±0.11% (101 runs sampled)
+source-map-js:    addMapping x 4,564 ops/sec ±0.21% (98 runs sampled)
+source-map-0.6.1: addMapping x 4,562 ops/sec ±0.11% (99 runs sampled)
+source-map-0.8.0: addMapping x 4,593 ops/sec ±0.11% (100 runs sampled)
+Fastest is gen-mapping:      addSegment
+
+Generate speed:
+gen-mapping:      decoded output x 379,864,020 ops/sec ±0.23% (93 runs sampled)
+gen-mapping:      encoded output x 14,368 ops/sec ±4.07% (82 runs sampled)
+source-map-js:    encoded output x 5,261 ops/sec ±0.21% (99 runs sampled)
+source-map-0.6.1: encoded output x 5,124 ops/sec ±0.58% (99 runs sampled)
+source-map-0.8.0: encoded output x 5,434 ops/sec ±0.33% (96 runs sampled)
+Fastest is gen-mapping:      decoded output
+
+
+***
+
+
+react.js.map
+Memory Usage:
+gen-mapping: addSegment       975096 bytes
+gen-mapping: addMapping      1102981 bytes
+source-map-js                2918836 bytes
+source-map-0.6.1             2885435 bytes
+source-map-0.8.0             2874336 bytes
+Smallest memory usage is gen-mapping: addSegment
+
+Adding speed:
+gen-mapping:      addSegment x 4,772 ops/sec ±0.15% (100 runs sampled)
+gen-mapping:      addMapping x 4,456 ops/sec ±0.13% (97 runs sampled)
+source-map-js:    addMapping x 1,618 ops/sec ±0.24% (97 runs sampled)
+source-map-0.6.1: addMapping x 1,622 ops/sec ±0.12% (99 runs sampled)
+source-map-0.8.0: addMapping x 1,631 ops/sec ±0.12% (100 runs sampled)
+Fastest is gen-mapping:      addSegment
+
+Generate speed:
+gen-mapping:      decoded output x 379,107,695 ops/sec ±0.07% (99 runs sampled)
+gen-mapping:      encoded output x 5,421 ops/sec ±1.60% (89 runs sampled)
+source-map-js:    encoded output x 2,113 ops/sec ±1.81% (98 runs sampled)
+source-map-0.6.1: encoded output x 2,126 ops/sec ±0.10% (100 runs sampled)
+source-map-0.8.0: encoded output x 2,176 ops/sec ±0.39% (98 runs sampled)
+Fastest is gen-mapping:      decoded output
 ```
 
-## 核心页面说明
-
-### 1. 首页 (HomePage)
-- 项目介绍和核心价值展示
-- AI 四大引擎功能介绍
-- 引导用户开始疗愈之旅
-
-### 2. 情感测评页 (AssessmentPage)
-- 5 道精心设计的心理测评题
-- 实时情绪状态评估
-- AI 分析生成用户情绪画像
-
-### 3. 叙事路线页 (JourneyPage)
-- 根据测评结果生成个性化路线
-- 3 个打卡点，每个点都有独特疗愈活动
-- 实时天气和时间显示
-
-### 4. 打卡互动页 (CheckInPage)
-- 支持拍照、语音、文字三种打卡方式
-- 情感标签选择
-- AI 实时情感分析
-
-### 5. 心灵游记页 (MemoryPage)
-- AI 生成专属心路影像诗
-- 旅程统计和情感分布可视化
-- 支持分享和下载手账
-
-### 6. 数字人页 (DigitalHumanPage)
-- 情感化 AI 数字人陪伴
-- 语音和文字交互
-- 智能问答和情感支持
-
-## 创新亮点
-
-### 1. 文化翻译官
-- 将静态的文化资源转化为动态的疗愈体验
-- 让传统文化与现代心理需求精准对接
-
-### 2. 情感共鸣师
-- AI 不仅是工具，更是情感伙伴
-- 理解、回应、陪伴用户的情感变化
-
-### 3. 千人千面
-- 没有固定路线，每个人的体验都是独一无二的
-- 基于实时数据动态调整叙事内容
-
-### 4. 情感资产
-- 将短暂的体验转化为可永久保存的情感记忆
-- 心路影像诗、线装手账等实体化产物
-
-## 可行性分析
-
-### 技术可行性 ✓
-- 采用成熟的技术栈
-- AI 功能可逐步接入真实 API（如文心一言、通义千问等）
-- 模块化设计，易于扩展和维护
-
-### 商业可行性 ✓
-- 符合乡村振兴国家战略
-- 满足都市人群心理健康需求
-- 可复制推广到其他传统村落
-
-### 用户体验 ✓
-- 简洁直观的界面设计
-- 流畅的交互体验
-- 情感化的数字人陪伴
-
-## 后续优化方向
-
-1. **AI 能力增强**
-   - 接入真实 AI 大模型 API
-   - 训练专属的村落文化知识库
-   - 提升情感分析准确度
-
-2. **功能扩展**
-   - 增加更多村落和路线
-   - 支持多人协作疗愈
-   - AR/VR沉浸式体验
-
-3. **商业化**
-   - 会员制度和增值服务
-   - 实体纪念品定制
-   - 与旅游平台合作
-
-## 开发团队
-
-乡叙心域项目组
-
-## 许可证
-
-MIT License
-
----
-
-**乡叙心域** - 让传统文化治愈现代心灵 🌿
+[source-map]: https://www.npmjs.com/package/source-map
+[trace-mapping]: https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping
