@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>乡叙心域 - AI 乡村疗愈平台 | 福安村示范项目</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+    
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
+    .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); }
+    .glass-dark { background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(20px); }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    .pulse-ring::before {
+      content: ''; position: absolute; inset: 0; border-radius: 50%;
+      background: inherit; animation: pulse-ring 2s infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    .float { animation: float 3s ease-in-out infinite; }
+    
+    @keyframes scan {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, #10b981, transparent);
+      animation: scan 2s linear infinite;
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .recording { animation: blink 1s infinite; }
+    
+    .map-grid {
+      background-image: 
+        linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    .hologram {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+      border: 1px solid rgba(147, 51, 234, 0.3);
+      box-shadow: 0 0 20px rgba(147, 51, 234, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const { motion, AnimatePresence } = window.Motion;
+    
+    // ========== AI 双模型架构展示组件 ==========
+    const AIModelVisualizer = ({ mode, confidence }) => {
+      return (
+        <div className="bg-gray-900 rounded-xl p-4 text-white mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold">AI 双模型架构</h4>
+            <span className="text-xs px-2 py-1 bg-green-500 rounded-full">
+              {mode === 'local' ? '本地 RoBERTa' : '云端 API'}
+            </span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${mode === 'local' ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+              <span className="text-sm">本地 RoBERTa 模型</span>
+              <span className="text-xs text-gray-400 ml-auto">置信度 {confidence}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${mode === 'cloud' ? 'bg-blue-500' : 'bg-gray-600'}`}></div>
+              <span className="text-sm">科大讯飞情感 API</span>
+              {mode === 'cloud' && <span className="text-xs text-blue-400 ml-auto">备用激活</span>}
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
+    // ========== LBS 地图展示组件 ==========
+    const LBSMap = ({ currentPosition, poiList, onNavigate }) => {
+      return (
+        <div className="relative h-64 bg-blue-50 rounded-2xl overflow-hidden map-grid border-2 border-blue-200">
+          {/* 地图网格 */}
+          <div className="absolute inset-0 opacity-20">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="absolute h-px bg-blue-400" style={{ top: `${i * 10}%`, left: 0, right: 0 }} />
+            ))}
+          </div>
+          
+          {/* POI 标记 */}
+          {poiList.map((poi, index) => (
+            <motion.div
+              key={poi.id}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="absolute cursor-pointer"
+              style={{ left: `${poi.x}%`, top: `${poi.y}%` }}
+              onClick={() => onNavigate(poi)}
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg ${
+                poi.active ? 'bg-gradient-to-r from-purple-500 to-pink-500 pulse-ring' : 'bg-gray-400'
+              }`}>
+                <i className="fas fa-map-marker-alt"></i>
+              </div>
+              <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                <div className="bg-white px-2 py-1 rounded-lg text-xs font-semibold shadow-md">
+                  {poi.name}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+          
+          {/* 当前位置 */}
+          <motion.div
+            className="absolute z-10"
+            style={{ left: `${currentPosition.x}%`, top: `${currentPosition.y}%` }}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <div className="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg"></div>
+          </motion.div>
+          
+          {/* 定位信息 */}
+          <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur rounded-lg px-3 py-2 shadow-lg">
+            <div className="flex items-center gap-2 text-xs">
+              <i className="fas fa-location-arrow text-blue-500"></i>
+              <span className="font-semibold">福安古村落</span>
+            </div>
+            <div className="text-xs text-gray-600 mt-1">
+              精度：±3 米 | 海拔：1,890m
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
+    // ========== AR 体验模拟组件 ==========
+    const ARExperience = ({ location, onClose }) => {
+      const [scanning, setScanning] = useState(true);
+      const [recognized, setRecognized] = useState(false);
+      
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          setScanning(false);
+          setRecognized(true);
+        }, 2000);
+        return () => clearTimeout(timer);
+      }, []);
+      
+      return (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg">
+            {/* 关闭按钮 */}
+            <button
+              onClick={onClose}
+              className="absolute -top-12 right-0 text-white text-2xl"
+            >
+              ✕
+            </button>
+            
+            {/* AR 视图 */}
+            <div className="relative aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl overflow-hidden">
+              {/* 背景图 */}
+              <img
+                src="https://images.unsplash.com/photo-1542640244-7e672d6bd4d8?w=800"
+                className="w-full h-full object-cover opacity-50"
+                alt="AR View"
+              />
+              
+              {/* 扫描线 */}
+              {scanning && <div className="scan-line"></div>}
+              
+              {/* 识别框 */}
+              {recognized && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="absolute inset-8 border-2 border-green-400 rounded-xl"
+                >
+                  {/* 识别信息 */}
+                  <div className="absolute -top-8 left-0 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    ✓ 建筑已识别
+                  </div>
+                  
+                  {/* 标注点 */}
+                  {[
+                    { x: '30%', y: '40%', label: '百年木柱' },
+                    { x: '60%', y: '35%', label: '雕花窗棂' },
+                    { x: '50%', y: '60%', label: '青石地基' }
+                  ].map((point, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: i * 0.3 }}
+                      className="absolute w-4 h-4 bg-red-500 rounded-full border-2 border-white"
+                      style={{ left: point.x, top: point.y }}
+                    >
+                      <div className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                        <div className="bg-white/90 px-2 py-1 rounded text-xs font-semibold">
+                          {point.label}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+              
+              {/* AR 叠加信息 */}
+              {recognized && (
+                <motion.div
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent pt-20 pb-4 px-4"
+                >
+                  <div className="text-white">
+                    <h3 className="font-bold text-lg mb-2">🏛️ 一颗印古建筑</h3>
+                    <p className="text-sm opacity-80 mb-3">
+                      建于清乾隆年间，典型的"三坊一照壁"结构
+                    </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-1 bg-blue-500 rounded">安全感</span>
+                      <span className="px-2 py-1 bg-purple-500 rounded">归属感</span>
+                      <span className="px-2 py-1 bg-pink-500 rounded">守护</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* 录制指示 */}
+              <div className="absolute top-4 right-4 flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full recording"></div>
+                <span className="text-white text-xs font-semibold">AR 录制中</span>
+              </div>
+            </div>
+            
+            {/* 操作按钮 */}
+            <div className="mt-4 flex gap-3">
+              <button className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold">
+                <i className="fas fa-camera mr-2"></i>拍摄建筑细节
+              </button>
+              <button className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold">
+                <i className="fas fa-magic mr-2"></i>开始疗愈任务
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
+    // ========== 多模态打卡组件 ==========
+    const MultiModalCheckIn = ({ location, onComplete }) => {
+      const [activeMode, setActiveMode] = useState('voice');
+      const [recording, setRecording] = useState(false);
+      const [recordingTime, setRecordingTime] = useState(0);
+      const [analyzing, setAnalyzing] = useState(false);
+      const [analysisResult, setAnalysisResult] = useState(null);
+      
+      const startRecording = () => {
+        setRecording(true);
+        setRecordingTime(0);
+        const timer = setInterval(() => {
+          setRecordingTime(prev => prev + 1);
+        }, 1000);
+        
+        setTimeout(() => {
+          clearInterval(timer);
+          setRecording(false);
+          analyzeEmotion();
+        }, 3000);
+      };
+      
+      const analyzeEmotion = () => {
+        setAnalyzing(true);
+        setTimeout(() => {
+          setAnalysisResult({
+            emotion: '平静',
+            confidence: 94.5,
+            keywords: ['宁静', '安详', '归属感'],
+            culturalElement: '瓦猫守护'
+          });
+          setAnalyzing(false);
+        }, 2000);
+      };
+      
+      const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      };
+      
+      return (
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <i className="fas fa-record-vinyl text-purple-500"></i>
+            多模态情感打卡
+          </h3>
+          
+          {/* 模式选择 */}
+          <div className="flex gap-2 mb-6">
+            {[
+              { id: 'voice', icon: 'fa-microphone', label: '语音日记' },
+              { id: 'photo', icon: 'fa-camera', label: '建筑拍摄' },
+              { id: 'symbol', icon: 'fa-seedling', label: '心情符号' }
+            ].map(mode => (
+              <button
+                key={mode.id}
+                onClick={() => setActiveMode(mode.id)}
+                className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+                  activeMode === mode.id
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <i className={`fas ${mode.icon} mr-2`}></i>
+                {mode.label}
+              </button>
+            ))}
+          </div>
+          
+          {/* 语音日记 */}
+          {activeMode === 'voice' && (
+            <div className="text-center py-8">
+              {recording ? (
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                  className="w-24 h-24 bg-gradient-to-r from-red-500 to-pink-500 rounded-full mx-auto flex items-center justify-center mb-4"
+                >
+                  <i className="fas fa-microphone text-white text-4xl"></i>
+                </motion.div>
+              ) : analyzing ? (
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mx-auto mb-4 flex items-center justify-center relative overflow-hidden">
+                    <motion.div
+                      className="absolute inset-0 bg-white/20"
+                      animate={{ x: ['-100%', '100%'] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    <i className="fas fa-brain text-white text-4xl"></i>
+                  </div>
+                  <p className="text-gray-600">AI 正在分析情感...</p>
+                </div>
+              ) : analysisResult ? (
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6">
+                  <div className="text-center mb-4">
+                    <div className="text-4xl mb-2">😌</div>
+                    <div className="font-bold text-lg">{analysisResult.emotion}</div>
+                    <div className="text-sm text-gray-600">置信度 {analysisResult.confidence}%</div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {analysisResult.keywords.map((kw, i) => (
+                        <span key={i} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="text-center text-sm text-gray-600 mt-3">
+                      <i className="fas fa-link mr-2"></i>
+                      已关联非遗元素：<span className="font-semibold text-purple-600">{analysisResult.culturalElement}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <i className="fas fa-microphone text-gray-400 text-3xl"></i>
+                  </div>
+                  <p className="text-gray-600 mb-4">点击录制语音日记</p>
+                </>
+              )}
+              
+              <button
+                onClick={recording ? null : startRecording}
+                disabled={analyzing || analysisResult}
+                className={`px-8 py-3 rounded-xl font-semibold transition-all ${
+                  recording
+                    ? 'bg-red-500 text-white'
+                    : analyzing || analysisResult
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg'
+                }`}
+              >
+                {recording ? `录制中 ${formatTime(recordingTime)}` : 
+                 analyzing ? '分析中...' : 
+                 analysisResult ? '已完成' : '开始录制'}
+              </button>
+            </div>
+          )}
+          
+          {/* 建筑拍摄 */}
+          {activeMode === 'photo' && (
+            <div className="text-center py-8">
+              <div className="aspect-video bg-gray-100 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1542640244-7e672d6bd4d8?w=600"
+                  className="w-full h-full object-cover"
+                  alt="Preview"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 text-white text-left">
+                  <div className="font-semibold">一颗印古建筑</div>
+                  <div className="text-xs opacity-80">安全感符号已标注</div>
+                </div>
+              </div>
+              <button className="px-8 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold">
+                <i className="fas fa-camera mr-2"></i>重新拍摄
+              </button>
+            </div>
+          )}
+          
+          {/* 心情符号 */}
+          {activeMode === 'symbol' && (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { emoji: '😌', label: '平静', color: 'from-blue-400 to-cyan-400' },
+                { emoji: '😊', label: '喜悦', color: 'from-yellow-400 to-orange-400' },
+                { emoji: '🥺', label: '感动', color: 'from-pink-400 to-rose-400' },
+                { emoji: '💡', label: '启发', color: 'from-purple-400 to-indigo-400' },
+                { emoji: '🌙', label: '怀念', color: 'from-indigo-400 to-blue-400' },
+                { emoji: '🎯', label: '专注', color: 'from-red-400 to-pink-400' }
+              ].map((symbol, i) => (
+                <motion.button
+                  key={i}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`p-4 rounded-xl bg-gradient-to-br ${symbol.color} text-white`}
+                >
+                  <div className="text-3xl mb-2">{symbol.emoji}</div>
+                  <div className="text-sm font-semibold">{symbol.label}</div>
+                </motion.button>
+              ))}
+            </div>
+          )}
+          
+          {analysisResult && (
+            <button
+              onClick={onComplete}
+              className="w-full mt-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:shadow-lg"
+            >
+              ✓ 确认打卡
+            </button>
+          )}
+        </div>
+      );
+    };
+    
+    // ========== B 端功能展示组件 ==========
+    const BEndDashboard = () => {
+      const [activeTab, setActiveTab] = useState('overview');
+      
+      const stats = [
+        { label: '今日客流', value: '1,247', change: '+12%', icon: 'fa-users', color: 'from-blue-500 to-cyan-500' },
+        { label: '平均停留', value: '2.3h', change: '+8%', icon: 'fa-clock', color: 'from-purple-500 to-pink-500' },
+        { label: '情感指数', value: '87.5', change: '+5%', icon: 'fa-heart', color: 'from-red-500 to-orange-500' },
+        { label: '消费转化', value: '34.2%', change: '+15%', icon: 'fa-yen-sign', color: 'from-green-500 to-emerald-500' }
+      ];
+      
+      return (
+        <div className="min-h-screen bg-gray-900 text-white">
+          {/* 顶部导航 */}
+          <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold">🏛️ 福安村文旅数据驾驶舱</h1>
+              <div className="flex gap-2">
+                {['overview', 'scripts', 'resources', 'config'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      activeTab === tab
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    }`}
+                  >
+                    {{
+                      overview: '数据概览',
+                      scripts: '剧本工厂',
+                      resources: '资源库',
+                      config: '配置平台'
+                    }[tab]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="text-sm text-gray-400">
+              {new Date().toLocaleString('zh-CN')}
+            </div>
+          </div>
+          
+          {/* 内容区域 */}
+          <div className="p-6">
+            {activeTab === 'overview' && (
+              <>
+                {/* 数据统计 */}
+                <div className="grid grid-cols-4 gap-6 mb-8">
+                  {stats.map((stat, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ y: -20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="bg-gray-800 rounded-xl p-6"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
+                          <i className={`fas ${stat.icon} text-white text-xl`}></i>
+                        </div>
+                        <span className="text-green-400 text-sm font-semibold">{stat.change}</span>
+                      </div>
+                      <div className="text-3xl font-bold mb-1">{stat.value}</div>
+                      <div className="text-gray-400 text-sm">{stat.label}</div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                {/* 热力图和图表 */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-gray-800 rounded-xl p-6">
+                    <h3 className="font-bold mb-4">🔥 客流热力图</h3>
+                    <div className="h-64 bg-gradient-to-br from-red-900 via-yellow-900 to-green-900 rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-50">
+                        {[...Array(20)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute w-20 h-20 bg-yellow-500 rounded-full blur-xl"
+                            style={{
+                              left: `${Math.random() * 100}%`,
+                              top: `${Math.random() * 100}%`,
+                              opacity: Math.random() * 0.5
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-800 rounded-xl p-6">
+                    <h3 className="font-bold mb-4">💖 情感图谱</h3>
+                    <div className="space-y-4">
+                      {[
+                        { emotion: '平静', percentage: 45, color: 'bg-blue-500' },
+                        { emotion: '喜悦', percentage: 32, color: 'bg-yellow-500' },
+                        { emotion: '感动', percentage: 15, color: 'bg-pink-500' },
+                        { emotion: '启发', percentage: 8, color: 'bg-purple-500' }
+                      ].map((item, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>{item.emotion}</span>
+                            <span>{item.percentage}%</span>
+                          </div>
+                          <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.percentage}%` }}
+                              transition={{ delay: i * 0.1 }}
+                              className={`h-full ${item.color}`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {activeTab === 'scripts' && (
+              <div className="bg-gray-800 rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-6">🎭 AI 叙事剧本工厂</h3>
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  {[
+                    { name: '山神会', icon: '🏔️', count: 12 },
+                    { name: '瓦猫', icon: '🐱', count: 8 },
+                    { name: '秧佬鼓', icon: '🥁', count: 6 }
+                  ].map((element, i) => (
+                    <motion.div
+                      key={i}
+                      whileHover={{ scale: 1.05 }}
+                      className="bg-gray-700 rounded-xl p-6 text-center cursor-pointer hover:bg-gray-600"
+                    >
+                      <div className="text-5xl mb-4">{element.icon}</div>
+                      <div className="font-bold text-lg mb-2">{element.name}</div>
+                      <div className="text-gray-400 text-sm">{element.count} 个剧本</div>
+                    </motion.div>
+                  ))}
+                </div>
+                <button className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold text-lg hover:shadow-lg">
+                  <i className="fas fa-magic mr-2"></i>一键生成节庆剧本框架
+                </button>
+              </div>
+            )}
+            
+            {activeTab === 'resources' && (
+              <div className="bg-gray-800 rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-6">📚 文旅资源数字库</h3>
+                <div className="space-y-4">
+                  {[
+                    { category: '古建筑', count: 23, icon: '🏛️' },
+                    { category: '非遗技艺', count: 15, icon: '🎨' },
+                    { category: '传说故事', count: 31, icon: '📖' },
+                    { category: '自然景观', count: 18, icon: '🌳' }
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-4 bg-gray-700 rounded-xl p-4">
+                      <div className="text-4xl">{item.icon}</div>
+                      <div className="flex-1">
+                        <div className="font-bold">{item.category}</div>
+                        <div className="text-gray-400 text-sm">活态文化一张图</div>
+                      </div>
+                      <div className="text-2xl font-bold text-purple-400">{item.count}</div>
+                      <button className="px-4 py-2 bg-purple-500 rounded-lg font-semibold text-sm">
+                        录入
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+    
+    // ========== 主应用 ==========
+    const App = () => {
+      const [currentPage, setCurrentPage] = useState('home');
+      const [showBEnd, setShowBEnd] = useState(false);
+      const [showAR, setShowAR] = useState(false);
+      const [currentLocation, setCurrentLocation] = useState(null);
+      
+      const poiList = [
+        { id: 1, name: '状元井', x: 30, y: 40, active: true },
+        { id: 2, name: '一颗印', x: 50, y: 50, active: true },
+        { id: 3, name: '瓦猫工坊', x: 70, y: 35, active: false },
+        { id: 4, name: '舞龙广场', x: 45, y: 65, active: false },
+        { id: 5, name: '悲悯寺', x: 65, y: 75, active: false }
+      ];
+      
+      if (showBEnd) {
+        return <BEndDashboard />;
+      }
+      
+      const renderPage = () => {
+        switch (currentPage) {
+          case 'home':
+            return (
+              <div className="min-h-screen gradient-bg">
+                {/* 切换按钮 */}
+                <div className="absolute top-4 right-4 z-50">
+                  <button
+                    onClick={() => setShowBEnd(true)}
+                    className="px-4 py-2 bg-white/20 backdrop-blur rounded-full text-white font-semibold hover:bg-white/30 transition-all"
+                  >
+                    🏛️ B 端演示
+                  </button>
+                </div>
+                
+                <section className="h-screen flex items-center justify-center px-4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center max-w-4xl"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-8xl mb-6"
+                    >
+                      ✨
+                    </motion.div>
+                    <h1 className="text-6xl font-bold text-white mb-6">
+                      乡叙<span className="text-yellow-300">心域</span>
+                    </h1>
+                    <p className="text-2xl text-white/90 mb-4">
+                      从观光到疗愈的智慧桥梁
+                    </p>
+                    <p className="text-lg text-white/80 mb-12 max-w-2xl mx-auto">
+                      AI 情感叙事引擎 · LBS 智能触发 · 多模态打卡 · 数字记忆生成
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setCurrentPage('assessment')}
+                        className="px-10 py-4 bg-white text-purple-600 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl"
+                      >
+                        开始疗愈之旅
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setCurrentPage('demo')}
+                        className="px-10 py-4 bg-white/20 backdrop-blur text-white rounded-full font-bold text-lg hover:bg-white/30"
+                      >
+                        观看演示视频
+                      </motion.button>
+                    </div>
+                    
+                    {/* 技术亮点 */}
+                    <div className="mt-16 grid grid-cols-3 gap-6 text-white">
+                      {[
+                        { icon: '🧠', title: '双模型架构', desc: 'RoBERTa+ 云端 API' },
+                        { icon: '📍', title: 'LBS 触发', desc: '一步一景一故事' },
+                        { icon: '🎭', title: '多模态', desc: '语音 + 图像 + 情感' }
+                      ].map((item, i) => (
+                        <div key={i} className="bg-white/10 backdrop-blur rounded-xl p-4">
+                          <div className="text-3xl mb-2">{item.icon}</div>
+                          <div className="font-bold">{item.title}</div>
+                          <div className="text-sm opacity-80">{item.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                </section>
+              </div>
+            );
+            
+          case 'assessment':
+            return (
+              <div className="min-h-screen gradient-bg py-12 px-4">
+                <div className="max-w-3xl mx-auto">
+                  <div className="text-center mb-8">
+                    <h2 className="text-4xl font-bold text-white mb-4">心境速写</h2>
+                    <p className="text-white/80">选择您当前的心境状态，AI 将为您匹配专属剧本</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    {[
+                      { id: 'anxious', emoji: '😰', label: '焦虑不安', desc: '寻求内心安宁' },
+                      { id: 'tired', emoji: '😴', label: '疲惫无力', desc: '需要能量补充' },
+                      { id: 'lonely', emoji: '🌙', label: '孤独迷茫', desc: '渴望情感连接' },
+                      { id: 'curious', emoji: '🔍', label: '好奇探索', desc: '寻找文化根源' }
+                    ].map((option, i) => (
+                      <motion.button
+                        key={option.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setCurrentPage('journey')}
+                        className="bg-white/90 backdrop-blur rounded-2xl p-6 text-left hover:shadow-xl transition-all"
+                      >
+                        <div className="text-5xl mb-3">{option.emoji}</div>
+                        <div className="font-bold text-gray-900">{option.label}</div>
+                        <div className="text-sm text-gray-600">{option.desc}</div>
+                      </motion.button>
+                    ))}
+                  </div>
+                  
+                  {/* 自定义输入 */}
+                  <div className="bg-white/90 backdrop-blur rounded-2xl p-6">
+                    <label className="block text-gray-700 font-semibold mb-3">
+                      或输入关键词（如"青龙传说"）
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="输入您感兴趣的文化元素..."
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+            
+          case 'journey':
+            return (
+              <div className="min-h-screen bg-gray-50">
+                <div className="bg-white shadow-sm sticky top-0 z-50 px-4 py-4">
+                  <div className="max-w-4xl mx-auto">
+                    <h1 className="text-2xl font-bold text-gray-900">《青龙的守护：重拾内心边界》</h1>
+                    <p className="text-sm text-gray-600">AI 生成的专属剧本 · 预计 2.5 小时</p>
+                  </div>
+                </div>
+                
+                <div className="max-w-4xl mx-auto px-4 py-8">
+                  {/* LBS 地图 */}
+                  <div className="mb-6">
+                    <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                      <i className="fas fa-map-marked-alt text-purple-500"></i>
+                      LBS 智能导航
+                    </h3>
+                    <LBSMap
+                      currentPosition={{ x: 25, y: 35 }}
+                      poiList={poiList}
+                      onNavigate={(poi) => {
+                        setCurrentLocation(poi);
+                        setCurrentPage('checkin');
+                      }}
+                    />
+                  </div>
+                  
+                  {/* 剧本开场 */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 text-white mb-6"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="text-4xl">📖</div>
+                      <div>
+                        <h3 className="font-bold text-lg mb-2">开场白</h3>
+                        <p className="leading-relaxed opacity-90">
+                          "林溪，状元井的静默，正等待倾听你的回响。百年前的状元曾在这里汲水，
+                          如今，你也站在了同样的位置。青龙守护的不仅是这片土地，更是每个人内心的边界..."
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                  
+                  {/* 路线站点 */}
+                  <div className="space-y-4">
+                    {[
+                      { name: '状元井', activity: '心境冥想', emotion: '平静' },
+                      { name: '一颗印', activity: '绘制心理印', emotion: '安全感' },
+                      { name: '舞龙广场', activity: '力量呼吸练习', emotion: '力量' }
+                    ].map((stop, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="bg-white rounded-xl shadow-lg p-4 flex items-center gap-4"
+                      >
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-bold">{stop.name}</div>
+                          <div className="text-sm text-gray-600">{stop.activity}</div>
+                        </div>
+                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
+                          {stop.emotion}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+            
+          case 'checkin':
+            return (
+              <div className="min-h-screen bg-gray-50 py-8 px-4">
+                <div className="max-w-lg mx-auto">
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      📍 {currentLocation?.name || '打卡点'}
+                    </h2>
+                    <p className="text-gray-600">完成疗愈任务，记录此刻感受</p>
+                  </div>
+                  
+                  {/* AR 按钮 */}
+                  <button
+                    onClick={() => setShowAR(true)}
+                    className="w-full mb-6 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl p-4 font-bold flex items-center justify-center gap-3"
+                  >
+                    <i className="fas fa-cube"></i>
+                    开启 AR 体验
+                  </button>
+                  
+                  {/* AR 体验 */}
+                  {showAR && <ARExperience location={currentLocation} onClose={() => setShowAR(false)} />}
+                  
+                  {/* 多模态打卡 */}
+                  <MultiModalCheckIn
+                    location={currentLocation}
+                    onComplete={() => setCurrentPage('memory')}
+                  />
+                  
+                  {/* 疗愈任务 */}
+                  <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                      <i className="fas fa-task text-purple-500"></i>
+                      当前疗愈任务
+                    </h3>
+                    <div className="bg-purple-50 rounded-xl p-4">
+                      <p className="text-gray-700 leading-relaxed">
+                        "请触摸百年木柱，为你此刻最需要保护的内心部分，绘制一个属于你的'心理一颗印'"
+                      </p>
+                      <div className="mt-4 flex gap-2">
+                        <span className="px-3 py-1 bg-white rounded-full text-sm text-purple-600 font-semibold">
+                          安全感
+                        </span>
+                        <span className="px-3 py-1 bg-white rounded-full text-sm text-purple-600 font-semibold">
+                          边界感
+                        </span>
+                        <span className="px-3 py-1 bg-white rounded-full text-sm text-purple-600 font-semibold">
+                          守护
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+            
+          case 'memory':
+            return (
+              <div className="min-h-screen gradient-bg py-12 px-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="text-center mb-8">
+                    <h2 className="text-4xl font-bold text-white mb-4">
+                      📖 心路影像诗
+                    </h2>
+                    <p className="text-white/80">AI 生成的专属数字记忆</p>
+                  </div>
+                  
+                  {/* AI 生成中 */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white/90 backdrop-blur rounded-3xl p-8 mb-6"
+                  >
+                    <div className="text-center mb-6">
+                      <div className="text-6xl mb-4">✨</div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        《我的福安安福记》
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        生成于 {new Date().toLocaleString('zh-CN')}
+                      </p>
+                    </div>
+                    
+                    {/* 诗歌内容 */}
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 mb-6">
+                      <pre className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed font-serif">
+{`状元井畔，你静默如千年古石
+瓦猫的眼，守护着内心边界
+触摸木柱的纹理，感受百年呼吸
+在舞龙的节奏里，找回力量韵律
+
+焦虑如雾，终会散去
+安宁如井，深邃永恒
+青龙飞过悲悯寺的屋檐
+在你的心间，筑起守护城墙`}
+                      </pre>
+                    </div>
+                    
+                    {/* AI 模型信息 */}
+                    <AIModelVisualizer mode="local" confidence="92.3" />
+                    
+                    {/* 统计数据 */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      {[
+                        { label: '打卡地点', value: '5', icon: '📍' },
+                        { label: '总时长', value: '2.5h', icon: '⏱️' },
+                        { label: '情感体验', value: '6', icon: '💖' }
+                      ].map((stat, i) => (
+                        <div key={i} className="bg-white rounded-xl p-4 text-center">
+                          <div className="text-3xl mb-2">{stat.icon}</div>
+                          <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                          <div className="text-sm text-gray-600">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* 操作按钮 */}
+                    <div className="flex gap-4">
+                      <button className="flex-1 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold">
+                        <i className="fas fa-share-alt mr-2"></i>分享
+                      </button>
+                      <button className="flex-1 py-4 bg-white border-2 border-purple-500 text-purple-600 rounded-xl font-bold">
+                        <i className="fas fa-book mr-2"></i>生成线装手账
+                      </button>
+                    </div>
+                  </motion.div>
+                  
+                  {/* 返回首页 */}
+                  <button
+                    onClick={() => setCurrentPage('home')}
+                    className="w-full py-4 bg-white/20 backdrop-blur text-white rounded-xl font-bold"
+                  >
+                    返回首页
+                  </button>
+                </div>
+              </div>
+            );
+            
+          case 'demo':
+            return (
+              <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <div className="text-8xl mb-6">🎬</div>
+                  <h2 className="text-4xl font-bold mb-4">演示视频</h2>
+                  <p className="text-xl text-gray-400 mb-8">
+                    完整功能演示即将播放...
+                  </p>
+                  <div className="aspect-video bg-gray-800 rounded-2xl flex items-center justify-center">
+                    <button className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-all">
+                      <i className="fas fa-play text-white text-3xl ml-2"></i>
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage('home')}
+                    className="mt-8 px-8 py-3 bg-white/20 rounded-full font-semibold hover:bg-white/30"
+                  >
+                    返回首页
+                  </button>
+                </div>
+              </div>
+            );
+            
+          default:
+            return null;
+        }
+      };
+      
+      return <div>{renderPage()}</div>;
+    };
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
